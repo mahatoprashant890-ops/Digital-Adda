@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Adda | Reality Reloaded</title>
+    
+    <meta name="theme-color" content="#6c63ff">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/vzD6f8y/logo.png">
+
+    <style>
+        /* Yahan wahi saara purana CSS (Design) rahega jo humne pehle banaya tha */
+    </style>
+</head>
+<body>
+    <script>
+        // Yahan saara purana Firebase aur Login logic rahega...
+
+        // PWA REGISTRATION (Ise script ke sabse niche rakhein)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('App Ready to Install!'))
+                .catch(err => console.log('PWA Error'));
+            });
+        }
+    </script>
+</body>
+</html>
