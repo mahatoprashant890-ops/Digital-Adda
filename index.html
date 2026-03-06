@@ -1,25 +1,205 @@
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Chrome ko turant prompt dikhane se rokein
-    e.preventDefault();
-    deferredPrompt = e;
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Adda | Reality Reloaded</title>
     
-    // Ek "Install App" ka button ya banner show karein (Optional)
-    const installBtn = document.createElement('button');
-    installBtn.innerText = "📲 Install Digital Adda App";
-    installBtn.style.cssText = "position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#6c63ff; color:white; border:none; padding:10px 20px; border-radius:20px; z-index:3000; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.4);";
-    
-    document.body.appendChild(installBtn);
+    <meta name="theme-color" content="#6c63ff">
+    <link rel="manifest" href="manifest.json">
 
-    installBtn.addEventListener('click', () => {
-        installBtn.style.display = 'none';
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('User ne app install kar liya!');
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        :root { --main: #6c63ff; --dark: #070708; --card-bg: #121216; --green: #2ecc71; --red: #ff4757; }
+        
+        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #e0e0e0; margin: 0; overflow-x: hidden; }
+        
+        /* 1. LOGIN SCREEN (Jo sabse pehle dikhega) */
+        #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-card { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        
+        /* 2. STORE DESIGN (Jo login ke baad dikhega) */
+        .nav { background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(15px); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1f1f; position: sticky; top: 0; z-index: 1000; }
+        .logo { font-size: 1.3rem; font-weight: 600; color: var(--main); letter-spacing: 1px; }
+
+        .search-container { padding: 25px 20px 10px; text-align: center; }
+        .search-bar { width: 90%; max-width: 500px; padding: 12px 20px; border-radius: 25px; border: 1px solid #222; background: #111; color: white; outline: none; transition: 0.3s; }
+
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
+        .card { background: var(--card-bg); width: 280px; border-radius: 18px; overflow: hidden; border: 1px solid #1f1f1f; transition: 0.3s; }
+        .card img { width: 100%; height: 160px; object-fit: cover; }
+        
+        /* Forms & Buttons */
+        input { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #222; background: #000; color: white; outline: none; }
+        .btn { background: var(--main); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 5px; }
+        .secondary-btn { background: transparent; color: #888; border: none; margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 0.85rem; }
+        
+        #adminPanel { background: #1a1a20; padding: 20px; border-radius: 15px; margin: 20px auto; max-width: 400px; display: none; border: 1px dashed var(--main); }
+    </style>
+</head>
+<body>
+
+    <div id="authOverlay">
+        <div class="auth-card" id="loginForm">
+            <h2 style="color:var(--main); margin-bottom:5px;">Digital Adda</h2>
+            <p style="color:#666; font-size:0.9rem;">Welcome Back! Please Login</p>
+            <input type="email" id="uEmail" placeholder="Email Address">
+            <input type="password" id="uPass" placeholder="Password">
+            <button class="btn" onclick="handleUserLogin()">Login to Store</button>
+            <button class="secondary-btn" onclick="toggleAuth(true)">Don't have an account? Sign Up</button>
+            <hr style="border:0; border-top:1px solid #222; margin:20px 0;">
+            <button class="secondary-btn" style="color:var(--main); font-weight:bold;" onclick="showAdminLogin()">Admin Login (Prashant)</button>
+        </div>
+
+        <div class="auth-card" id="signupForm" style="display:none;">
+            <h2 style="color:var(--green);">Create Account</h2>
+            <p style="color:#666; font-size:0.9rem;">Join Digital Adda Today</p>
+            <input type="text" id="uName" placeholder="Full Name">
+            <input type="email" id="uNewEmail" placeholder="Email Address">
+            <input type="password" id="uNewPass" placeholder="Create Password">
+            <button class="btn" style="background:var(--green);" onclick="handleUserSignup()">Sign Up Now</button>
+            <button class="secondary-btn" onclick="toggleAuth(false)">Already have an account? Login</button>
+        </div>
+    </div>
+
+    <div id="mainApp" style="display:none;">
+        <div class="nav">
+            <div class="logo">DIGITAL ADDA</div>
+            <div>
+                <button id="adminBtn" style="display:none; background:#333; color:white; border:none; padding:5px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" onclick="toggleAdminPanel()">+ Admin</button>
+                <button onclick="logout()" style="background:var(--red); border:none; color:white; padding:5px 12px; border-radius:5px; cursor:pointer;">Logout</button>
+            </div>
+        </div>
+
+        <div id="adminPanel">
+            <h3 style="margin-top:0; color:var(--main);">Admin: Upload Course</h3>
+            <input type="text" id="pTitle" placeholder="Course Title">
+            <input type="number" id="pPrice" placeholder="Price (₹)">
+            <input type="file" id="pFile">
+            <input type="text" id="pLink" placeholder="Google Drive/Download Link">
+            <button class="btn" onclick="uploadCourse()">Publish Live</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-bar" id="searchInput" placeholder="Search for your favorite course..." onkeyup="filterItems()">
+        </div>
+
+        <div class="container" id="productGrid">
+            <p>Syncing courses with database...</p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMg3Gakrrwpg8JhWCVdlcdAaoNiILsZck",
+            authDomain: "digital-adda-3578b.firebaseapp.com",
+            databaseURL: "https://digital-adda-3578b-default-rtdb.firebaseio.com/", 
+            projectId: "digital-adda-3578b",
+            appId: "1:337849362229:web:d4a12ce4a90bed12d30e7c"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // Aapka Admin Email
+        const ADMIN_EMAIL = "mahatoprashant890@gmail.com"; 
+
+        // Functions
+        function toggleAuth(showSignup) {
+            document.getElementById('loginForm').style.display = showSignup ? 'none' : 'block';
+            document.getElementById('signupForm').style.display = showSignup ? 'block' : 'none';
+        }
+
+        function handleUserSignup() {
+            const email = document.getElementById('uNewEmail').value;
+            const pass = document.getElementById('uNewPass').value;
+            if(!email || !pass) return alert("Details bhariye!");
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then(() => alert("Account Created! Now Login."))
+                .catch(err => alert(err.message));
+        }
+
+        function handleUserLogin() {
+            const email = document.getElementById('uEmail').value;
+            const pass = document.getElementById('uPass').value;
+            auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+        }
+
+        function showAdminLogin() {
+            const email = prompt("Admin Email:");
+            const pass = prompt("Admin Password:");
+            if(email && pass) auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+        }
+
+        // Check Login State
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                // Agar aap login hain toh admin button dikhega
+                if(user.email === ADMIN_EMAIL) document.getElementById('adminBtn').style.display = 'inline-block';
+                loadStoreData();
+            } else {
+                document.getElementById('authOverlay').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
             }
-            deferredPrompt = null;
         });
-    });
-});
+
+        function logout() { auth.signOut().then(() => location.reload()); }
+
+        function toggleAdminPanel() { 
+            const p = document.getElementById('adminPanel');
+            p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function loadStoreData() {
+            db.ref("products").on("value", snap => {
+                const grid = document.getElementById("productGrid");
+                grid.innerHTML = "";
+                snap.forEach(child => {
+                    const p = child.val();
+                    grid.innerHTML += `
+                    <div class="card product-item">
+                        <img src="${p.img}">
+                        <div style="padding:15px;">
+                            <h3 class="prod-title" style="margin:0 0 10px 0;">${p.title}</h3>
+                            <div style="color:var(--green); font-size:1.2rem; font-weight:bold; margin-bottom:15px;">₹${p.price}</div>
+                            <button class="btn" onclick="alert('Payment processing for: ${p.title}')">Unlock Access</button>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        async function uploadCourse() {
+            const f = document.getElementById("pFile").files[0];
+            const t = document.getElementById("pTitle").value;
+            const p = document.getElementById("pPrice").value;
+            const l = document.getElementById("pLink").value;
+            if(!f || !t || !p || !l) return alert("Sari details bharna zaroori hai!");
+            
+            const fd = new FormData(); fd.append("image", f);
+            const res = await fetch("https://api.imgbb.com/1/upload?key=6fb0e3977c03994a99b298df64c13862", {method:"POST", body:fd});
+            const d = await res.json();
+            if(d.success) {
+                db.ref("products").push({title:t, price:p, img: d.data.url, link:l});
+                alert("Course Successfull Upload ho gaya!");
+                toggleAdminPanel();
+            }
+        }
+
+        function filterItems() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let items = document.getElementsByClassName('product-item');
+            for (let i = 0; i < items.length; i++) {
+                let title = items[i].getElementsByClassName('prod-title')[0].innerText;
+                items[i].style.display = title.toLowerCase().includes(input) ? "block" : "none";
+            }
+        }
+    </script>
+</body>
+</html>
