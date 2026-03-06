@@ -10,19 +10,179 @@
     <link rel="apple-touch-icon" href="https://i.ibb.co/vzD6f8y/logo.png">
 
     <style>
-        /* Yahan wahi saara purana CSS (Design) rahega jo humne pehle banaya tha */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        :root { --main: #6c63ff; --dark: #070708; --card-bg: #121216; --green: #2ecc71; --red: #ff4757; --whatsapp: #25d366; }
+        
+        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #e0e0e0; margin: 0; overflow-x: hidden; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, rgba(108, 99, 255, 0.05) 0%, rgba(0,0,0,1) 100%); z-index: -1; }
+
+        .nav { background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(20px); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1f1f; position: sticky; top: 0; z-index: 1000; }
+        .logo { font-size: 1.4rem; font-weight: 600; color: var(--main); letter-spacing: 2px; }
+        
+        .admin-controls { display: flex; gap: 10px; }
+        .admin-trigger { background: transparent; border: 1px solid #333; color: #888; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+        .logout-btn { background: var(--red); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; display: none; }
+
+        .search-container { padding: 30px 20px 10px; text-align: center; }
+        .search-bar { width: 90%; max-width: 500px; padding: 12px 20px; border-radius: 25px; border: 1px solid #222; background: #111; color: white; outline: none; transition: 0.3s; }
+
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 25px; padding: 20px 15px 60px; }
+        .card { background: var(--card-bg); width: 290px; border-radius: 20px; overflow: hidden; border: 1px solid #1f1f1f; transition: 0.4s; }
+        .card img { width: 100%; height: 170px; object-fit: cover; opacity: 0.8; }
+        
+        .whatsapp-float { position: fixed; bottom: 20px; right: 20px; background: var(--whatsapp); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 2000; }
+
+        footer { padding: 40px 20px; border-top: 1px solid #111; text-align: center; font-size: 0.9rem; color: #555; }
+        
+        .panel-container { display: none; background: var(--card-bg); max-width: 380px; margin: 20px auto; padding: 25px; border-radius: 15px; border: 1px solid var(--main); }
+        input { width: 92%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #222; background: #000; color: white; outline: none; }
+        .btn { background: var(--main); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
+
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(12px); }
+        .modal-content { background: #0c0c0e; margin: 12% auto; padding: 30px; border-radius: 25px; width: 85%; max-width: 360px; border: 1px solid #222; text-align: center; }
+        .qr-box { background: white; padding: 10px; border-radius: 15px; display: inline-block; margin: 20px 0; border: 3px solid var(--main); }
     </style>
 </head>
 <body>
-    <script>
-        // Yahan saara purana Firebase aur Login logic rahega...
 
-        // PWA REGISTRATION (Ise script ke sabse niche rakhein)
+    <div class="nav">
+        <div class="logo">DIGITAL ADDA</div>
+        <div class="admin-controls">
+            <button id="adminTrigger" class="admin-trigger" onclick="toggleLogin()">Admin</button>
+            <button id="logoutBtn" class="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </div>
+
+    <div id="loginBox" class="panel-container">
+        <h3>Admin Access</h3>
+        <input type="email" id="admEmail" placeholder="Email">
+        <input type="password" id="admPass" placeholder="Password">
+        <button class="btn" onclick="handleLogin()">Log In</button>
+    </div>
+
+    <div id="adminPanel" class="panel-container">
+        <h3 style="color:var(--green);">Upload Course</h3>
+        <input type="text" id="pTitle" placeholder="Course Name">
+        <input type="number" id="pPrice" placeholder="Price (₹)">
+        <input type="file" id="pFile">
+        <input type="text" id="pLink" placeholder="Download Link">
+        <button class="btn" onclick="handleUpload()">Publish Live</button>
+    </div>
+
+    <div class="search-container">
+        <input type="text" class="search-bar" id="searchInput" placeholder="Search your course..." onkeyup="filterCourses()">
+    </div>
+
+    <div class="container" id="productGrid">
+        <h2 id="status">Syncing Courses...</h2>
+    </div>
+
+    <a href="https://wa.me/917903530625" class="whatsapp-float" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="30">
+    </a>
+
+    <footer>
+        <div>&copy; 2026 Reality Reloaded | Prashant Mahato</div>
+    </footer>
+
+    <div id="payModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin:0;">Secure Payment</h2>
+            <p id="payDetail" style="color:#888;"></p>
+            <div class="qr-box"><img id="upiQR" src=""></div>
+            <button class="btn" onclick="openApp()">Pay via App 📱</button>
+            <button class="btn" style="background:var(--green);" onclick="paidConfirm()">Get Access ✅</button>
+            <button class="btn" style="background:transparent; color:#444;" onclick="closePay()">Cancel</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMg3Gakrrwpg8JhWCVdlcdAaoNiILsZck",
+            authDomain: "digital-adda-3578b.firebaseapp.com",
+            databaseURL: "https://digital-adda-3578b-default-rtdb.firebaseio.com/", 
+            projectId: "digital-adda-3578b",
+            appId: "1:337849362229:web:d4a12ce4a90bed12d30e7c"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+        const MY_UPI = "7903530625@fam";
+        let tempProd = {};
+
+        // CORE LOGIC
+        function toggleLogin() {
+            const box = document.getElementById("loginBox");
+            box.style.display = box.style.display === "block" ? "none" : "block";
+        }
+
+        function handleLogin() {
+            const e = document.getElementById("admEmail").value.trim();
+            const p = document.getElementById("admPass").value.trim();
+            auth.signInWithEmailAndPassword(e, p).then(() => {
+                document.getElementById("adminPanel").style.display = "block";
+                document.getElementById("loginBox").style.display = "none";
+                document.getElementById("adminTrigger").style.display = "none";
+                document.getElementById("logoutBtn").style.display = "block";
+            }).catch(err => alert("Login Failed: " + err.message));
+        }
+
+        function handleLogout() {
+            auth.signOut().then(() => location.reload());
+        }
+
+        db.ref("products").on("value", snap => {
+            document.getElementById("status").style.display = "none";
+            const grid = document.getElementById("productGrid");
+            grid.innerHTML = "";
+            snap.forEach(child => {
+                const p = child.val();
+                grid.innerHTML += `<div class="card product-item"><img src="${p.img}"><div style="padding:20px;"><h3 class="prod-title">${p.title}</h3><div style="color:var(--green); font-size:1.3rem; font-weight:600;">₹${p.price}</div><button class="btn" onclick="startPay('${p.price}','${p.title}','${p.link}')">Unlock Now</button></div></div>`;
+            });
+        });
+
+        async function handleUpload() {
+            const f = document.getElementById("pFile").files[0];
+            const t = document.getElementById("pTitle").value;
+            const p = document.getElementById("pPrice").value;
+            const l = document.getElementById("pLink").value;
+            if(!f || !t || !p || !l) return alert("Fill all fields!");
+            const fd = new FormData(); fd.append("image", f);
+            const res = await fetch("https://api.imgbb.com/1/upload?key=6fb0e3977c03994a99b298df64c13862", {method:"POST", body:fd});
+            const d = await res.json();
+            if(d.success) { await db.ref("products").push({title:t, price:p, img: d.data.url, link:l}); location.reload(); }
+        }
+
+        function startPay(amt, title, link) {
+            tempProd = {amt, title, link};
+            document.getElementById("payDetail").innerText = title;
+            const upi = `upi://pay?pa=${MY_UPI}&pn=Prashant&am=${amt}&tn=${encodeURIComponent(title)}&cu=INR`;
+            document.getElementById("upiQR").src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upi)}`;
+            document.getElementById("payModal").style.display = "block";
+        }
+        function openApp() { window.location.href = `upi://pay?pa=${MY_UPI}&pn=Prashant&am=${tempProd.amt}&tn=${encodeURIComponent(tempProd.title)}&cu=INR`; }
+        function paidConfirm() { if(confirm("Payment Success?")) window.open(tempProd.link, "_blank"); }
+        function closePay() { document.getElementById("payModal").style.display = "none"; }
+        function filterCourses() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let items = document.getElementsByClassName('product-item');
+            for (let i = 0; i < items.length; i++) {
+                let title = items[i].getElementsByClassName('prod-title')[0].innerText;
+                items[i].style.display = title.toLowerCase().includes(input) ? "block" : "none";
+            }
+        }
+
+        // PWA REGISTRATION
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('App Ready to Install!'))
-                .catch(err => console.log('PWA Error'));
+                .then(reg => console.log('App Ready!'))
+                .catch(err => console.log('Error'));
             });
         }
     </script>
